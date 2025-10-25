@@ -27,7 +27,7 @@ wheels/
 *.egg
 
 # Session data (optional - uncomment if you don't want to track sessions)
-# sessions/
+sessions/*.json
 
 # IDE
 .vscode/
