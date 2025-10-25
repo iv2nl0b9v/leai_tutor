@@ -1,0 +1,16 @@
+IMPORTANT: You need to create a .env file manually!
+
+1. Create a new file named exactly: .env
+   (in the leai_tutor folder, same location as app.py)
+
+2. Add this line to the file:
+   GEMINI_API_KEY=your_actual_api_key_here
+
+3. Replace "your_actual_api_key_here" with your real API key from:
+   https://makersuite.google.com/app/apikey
+
+Example .env file content:
+GEMINI_API_KEY=AIzaSyBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+That's it! Then run: python -m solara run app.py
+
