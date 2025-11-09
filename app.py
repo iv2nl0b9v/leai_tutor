@@ -282,7 +282,7 @@ def StudentInputArea():
             except Exception as e:
                 print(f"Error capturing canvas: {e}")
         
-        # Add student message to history
+        # Create student message
         student_msg = Message(
             role='student',
             content=text if text else "(see canvas)",
@@ -290,7 +290,17 @@ def StudentInputArea():
             timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
         
-        current_session.value.messages.append(asdict(student_msg))
+        # Create new messages list with student message (immutable update)
+        new_messages = current_session.value.messages + [asdict(student_msg)]
+        
+        # Create new session with updated messages to trigger UI update
+        current_session.value = Session(
+            topic_name=current_session.value.topic_name,
+            messages=new_messages,
+            created_at=current_session.value.created_at,
+            status=current_session.value.status,
+            session_id=current_session.value.session_id
+        )
         
         # Get AI feedback
         topics = load_all_topics(TOPICS_DIR)
@@ -302,7 +312,7 @@ def StudentInputArea():
             
             feedback = get_ai_feedback(topic, msg_objects, text, canvas_img, GEMINI_API_KEY)
             
-            # Add tutor response
+            # Create tutor response message
             tutor_msg = Message(
                 role='tutor',
                 content=feedback,
@@ -310,13 +320,18 @@ def StudentInputArea():
                 timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             )
             
-            current_session.value.messages.append(asdict(tutor_msg))
+            # Add tutor message and create new session (immutable update)
+            new_messages_with_tutor = current_session.value.messages + [asdict(tutor_msg)]
+            current_session.value = Session(
+                topic_name=current_session.value.topic_name,
+                messages=new_messages_with_tutor,
+                created_at=current_session.value.created_at,
+                status=current_session.value.status,
+                session_id=current_session.value.session_id
+            )
             
             # Save session
             save_session(current_session.value, SESSIONS_DIR)
-            
-            # Force re-render by creating new Session object
-            current_session.value = Session(**asdict(current_session.value))
         
         # Clear input
         student_input.value = ""
