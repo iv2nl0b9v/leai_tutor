@@ -1,6 +1,7 @@
 """
 AI service integration with Google Gemini
 """
+
 from typing import List, Optional
 from PIL import Image
 import google.generativeai as genai
@@ -12,7 +13,7 @@ def get_gemini_model(api_key: Optional[str]):
     """Get configured Gemini model"""
     if not api_key:
         return None
-    return genai.GenerativeModel('gemini-2.5-flash')
+    return genai.GenerativeModel("gemini-2.5-flash")
 
 
 def create_system_prompt(topic: Topic) -> str:
@@ -39,7 +40,7 @@ def generate_initial_task(topic: Topic, api_key: Optional[str]) -> str:
     model = get_gemini_model(api_key)
     if not model:
         return "Please configure your GEMINI_API_KEY in the .env file."
-    
+
     prompt = f"""{create_system_prompt(topic)}
 
 Generate a friendly greeting and an appropriate first practice problem for this student.
@@ -47,7 +48,7 @@ Choose from these example problems or create a similar one:
 {chr(10).join('- ' + ex for ex in topic.examples[:3])}
 
 Keep it encouraging and clear!"""
-    
+
     try:
         response = model.generate_content(prompt)
         return response.text
@@ -55,20 +56,26 @@ Keep it encouraging and clear!"""
         return f"Error generating task: {str(e)}"
 
 
-def get_ai_feedback(topic: Topic, conversation_history: List[Message], 
-                   student_text: str, canvas_image: Optional[Image.Image],
-                   api_key: Optional[str]) -> str:
+def get_ai_feedback(
+    topic: Topic,
+    conversation_history: List[Message],
+    student_text: str,
+    canvas_image: Optional[Image.Image],
+    api_key: Optional[str],
+) -> str:
     """Get AI feedback on student's work"""
     model = get_gemini_model(api_key)
     if not model:
         return "Please configure your GEMINI_API_KEY in the .env file."
-    
+
     # Build conversation context
-    history_text = "\n\n".join([
-        f"{'🤖 Tutor' if msg.role == 'tutor' else '👧 Student'}: {msg.content}"
-        for msg in conversation_history[-5:]  # Last 5 messages for context
-    ])
-    
+    history_text = "\n\n".join(
+        [
+            f"{'🤖 Tutor' if msg.role == 'tutor' else '👧 Student'}: {msg.content}"
+            for msg in conversation_history[-5:]  # Last 5 messages for context
+        ]
+    )
+
     prompt = f"""{create_system_prompt(topic)}
 
 Conversation so far:
@@ -82,7 +89,7 @@ Student's text response: {student_text if student_text else "(no text provided)"
 Provide constructive, encouraging feedback. If their answer is correct, celebrate and offer the next problem.
 If incorrect or incomplete, give a gentle hint to guide them toward the solution.
 Remember to be patient, warm, and use age-appropriate language!"""
-    
+
     try:
         if canvas_image:
             # Use Gemini Vision with both text and image
@@ -90,8 +97,7 @@ Remember to be patient, warm, and use age-appropriate language!"""
         else:
             # Text only
             response = model.generate_content(prompt)
-        
+
         return response.text
     except Exception as e:
         return f"Error getting feedback: {str(e)}"
-
