@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Dict
 
 import solara
+import ipycanvas
 from ipycanvas import Canvas
 from PIL import Image
 import google.generativeai as genai
@@ -54,25 +55,59 @@ def DrawingCanvas():
     is_drawing = solara.use_reactive(False)
     current_color = solara.use_reactive("black")
     line_width = solara.use_reactive(3)
-    canvas_created = solara.use_reactive(False)
+    last_x = solara.use_reactive(0)
+    last_y = solara.use_reactive(0)
     
-    # Only create canvas if we have a valid kernel context (not during initialization)
     def create_canvas():
-        # Check if we're in a real kernel context
-        try:
-            kernel_id = solara.get_kernel_id()
-            if kernel_id:
-                canvas = Canvas(width=700, height=500)
-                canvas.fill_style = "white"
-                canvas.fill_rect(0, 0, 700, 500)
+        """Create and initialize the canvas with mouse event handlers"""
+        # You need to create a canvas manager, since global widgets cannot be share between users
+        # See: https://py.cafe/maartenbreddels/solara-ipycanvas-smiley
+        canvas = Canvas(width=700, height=500, _canvas_manager=ipycanvas.canvas._CanvasManager())
+        canvas.fill_style = "white"
+        canvas.fill_rect(0, 0, 700, 500)
+        canvas.stroke_style = current_color.value
+        canvas.line_width = line_width.value
+        drawing_canvas.value = canvas
+        
+        # Set up mouse event handlers for drawing
+        def on_mouse_down(x, y):
+            """Handle mouse down event - start drawing"""
+            is_drawing.value = True
+            last_x.value = x
+            last_y.value = y
+            # Draw a small dot at the starting position
+            canvas.fill_style = current_color.value
+            canvas.begin_path()
+            canvas.arc(x, y, line_width.value / 2, 0, 2 * 3.14159)
+            canvas.fill()
+        
+        def on_mouse_move(x, y):
+            """Handle mouse move event - draw line while dragging"""
+            if is_drawing.value:
                 canvas.stroke_style = current_color.value
                 canvas.line_width = line_width.value
-                drawing_canvas.value = canvas
-                canvas_created.value = True
-                return canvas
-        except:
-            pass
-        return None
+                canvas.begin_path()
+                canvas.move_to(last_x.value, last_y.value)
+                canvas.line_to(x, y)
+                canvas.stroke()
+                last_x.value = x
+                last_y.value = y
+        
+        def on_mouse_up(x, y):
+            """Handle mouse up event - stop drawing"""
+            is_drawing.value = False
+        
+        def on_mouse_out(x, y):
+            """Handle mouse out event - stop drawing when mouse leaves canvas"""
+            is_drawing.value = False
+        
+        # Register event handlers
+        canvas.on_mouse_down(on_mouse_down)
+        canvas.on_mouse_move(on_mouse_move)
+        canvas.on_mouse_up(on_mouse_up)
+        canvas.on_mouse_out(on_mouse_out)
+        
+        return canvas
     
     canvas = solara.use_memo(create_canvas, [])
     
@@ -101,10 +136,10 @@ def DrawingCanvas():
             solara.Button("⬜ Eraser", on_click=set_eraser, color="primary" if current_color.value == "white" else None)
             solara.Button("🗑️ Clear Canvas", on_click=clear_canvas, color="error")
         
-        if canvas:
-            solara.display(canvas)
-        else:
-            solara.Text("Canvas will load when you open the page in your browser...")
+        # if canvas:
+        solara.display(canvas)
+        # else:
+        #     solara.Text("Canvas will load when you open the page in your browser...")
 
 
 @solara.component  
